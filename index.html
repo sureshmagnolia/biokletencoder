@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Booklet Generator</title>
+    <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --bg: #f8fafc;
+            --card: #ffffff;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg);
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px;
+        }
+        .container {
+            max-width: 600px;
+            width: 100%;
+            background: var(--card);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        }
+        h1 { color: #1e293b; margin-top: 0; }
+        .upload-area {
+            border: 2px dashed #cbd5e1;
+            padding: 40px;
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .upload-area:hover { border-color: var(--primary); }
+        input[type="file"] { display: none; }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 20px;
+            width: 100%;
+        }
+        .btn:disabled { background: #94a3b8; }
+        #status { margin-top: 20px; color: #64748b; font-size: 14px; }
+        .preview { margin-top: 20px; width: 100%; height: 500px; border: 1px solid #e2e8f0; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Smart Booklet Render</h1>
+        <p>Adobe-Standard Vector Booklet Engine (V3.2.0 Sync)</p>
+        
+        <div class="upload-area" onclick="document.getElementById('pdfInput').click()">
+            <p id="fileName">Click to upload PDF</p>
+            <input type="file" id="pdfInput" accept="application/pdf">
+        </div>
+
+        <button id="generateBtn" class="btn" disabled>Generate Booklet</button>
+        <div id="status"></div>
+    </div>
+
+    <iframe id="preview" class="preview"></iframe>
+
+    <script>
+        const pdfInput = document.getElementById('pdfInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const status = document.getElementById('status');
+        const preview = document.getElementById('preview');
+        const fileName = document.getElementById('fileName');
+
+        let originalPdfBytes = null;
+
+        pdfInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                fileName.textContent = file.name;
+                originalPdfBytes = await file.arrayBuffer();
+                generateBtn.disabled = false;
+            }
+        });
+
+        generateBtn.addEventListener('click', async () => {
+            try {
+                status.textContent = 'Processing Adobe-standard vector booklet...';
+                const bookletBytes = await createBooklet(originalPdfBytes);
+                
+                const blob = new Blob([bookletBytes], { type: 'application/pdf' });
+                const url = URL.createObjectURL(blob);
+                
+                preview.src = url;
+                preview.style.display = 'block';
+                status.textContent = 'Booklet Generated Successfully!';
+                
+                // Also trigger download
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'booklet_output.pdf';
+                link.click();
+            } catch (err) {
+                console.error(err);
+                status.textContent = 'Error: ' + err.message;
+            }
+        });
+
+        async function createBooklet(pdfBytes) {
+            const { PDFDocument } = PDFLib;
+            const srcDoc = await PDFDocument.load(pdfBytes);
+            const bookletDoc = await PDFDocument.create();
+            
+            const originalPageCount = srcDoc.getPageCount();
+            const totalPages = Math.ceil(originalPageCount / 4) * 4;
+            const totalSheets = totalPages / 4;
+
+            // Use dimensions from first page to maintain exact quality/ratio
+            const firstPage = srcDoc.getPage(0);
+            const { width, height } = firstPage.getSize();
+            
+            // Landscape sheet = 2x Width (to hold two pages side-by-side)
+            const sheetWidth = width * 2;
+            const sheetHeight = height;
+
+            for (let s = 0; s < totalSheets; s++) {
+                // Front Side (Outer)
+                const frontLeftIdx = totalPages - (2 * s);
+                const frontRightIdx = (2 * s) + 1;
+                await addSheet(srcDoc, bookletDoc, frontLeftIdx, frontRightIdx, originalPageCount, sheetWidth, sheetHeight, width, height);
+
+                // Back Side (Inner)
+                const backLeftIdx = (2 * s) + 2;
+                const backRightIdx = totalPages - (2 * s) - 1;
+                await addSheet(srcDoc, bookletDoc, backLeftIdx, backRightIdx, originalPageCount, sheetWidth, sheetHeight, width, height);
+            }
+
+            return await bookletDoc.save();
+        }
+
+        async function addSheet(srcDoc, bookletDoc, leftIdx, rightIdx, maxPages, sW, sH, pW, pH) {
+            const sheet = bookletDoc.addPage([sW, sH]);
+            const halfW = sW / 2;
+
+            const drawPage = async (idx, xOffset) => {
+                if (idx <= maxPages) {
+                    const [embeddedPage] = await bookletDoc.embedPdf(srcDoc, [idx - 1]);
+                    
+                    // No scaling needed if sheet is exactly 2x width, but we'll apply it for safety
+                    const scale = Math.min(halfW / pW, sH / pH);
+                    const drawW = pW * scale;
+                    const drawH = pH * scale;
+                    
+                    const ox = xOffset + (halfW - drawW) / 2;
+                    const oy = (sH - drawH) / 2;
+
+                    sheet.drawPage(embeddedPage, {
+                        x: ox,
+                        y: oy,
+                        width: drawW,
+                        height: drawH,
+                    });
+                }
+            };
+
+            await drawPage(leftIdx, 0);
+            await drawPage(rightIdx, halfW);
+        }
+    </script>
+</body>
+</html>
