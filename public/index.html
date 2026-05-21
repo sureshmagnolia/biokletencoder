@@ -3,175 +3,1140 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Booklet Generator</title>
+    <title>Smart Booklet Generator & Bookbinder</title>
+    <!-- Premium Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
     <style>
         :root {
-            --primary: #2563eb;
-            --bg: #f8fafc;
-            --card: #ffffff;
+            --bg: #030712;
+            --card-bg: rgba(17, 24, 39, 0.7);
+            --border: rgba(255, 255, 255, 0.06);
+            --border-hover: rgba(99, 102, 241, 0.4);
+            
+            --primary: #6366f1;
+            --primary-light: #8b5cf6;
+            --primary-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
+            --primary-glow: rgba(99, 102, 241, 0.2);
+            
+            --accent: #10b981;
+            --accent-gradient: linear-gradient(135deg, #10b981, #059669);
+            --accent-glow: rgba(16, 185, 129, 0.15);
+            
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            
+            --text: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            
+            --font-display: 'Outfit', sans-serif;
+            --font-sans: 'Plus Jakarta Sans', sans-serif;
         }
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg);
+
+        * {
+            box-sizing: border-box;
             margin: 0;
+            padding: 0;
+            font-family: var(--font-sans);
+            scrollbar-width: thin;
+            scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+        }
+
+        body {
+            background-color: var(--bg);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.08) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.08) 0px, transparent 50%);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 40px 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 40px;
         }
+
         .container {
-            max-width: 600px;
+            max-width: 1000px;
             width: 100%;
-            background: var(--card);
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
         }
-        h1 { color: #1e293b; margin-top: 0; }
-        .upload-area {
-            border: 2px dashed #cbd5e1;
-            padding: 40px;
+
+        /* Header styling */
+        header {
             text-align: center;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: border-color 0.2s;
+            margin-bottom: 20px;
         }
-        .upload-area:hover { border-color: var(--primary); }
-        input[type="file"] { display: none; }
+
+        header h1 {
+            font-family: var(--font-display);
+            font-size: 2.8rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 4px 10px;
+            background: rgba(99, 102, 241, 0.12);
+            border: 1px solid rgba(99, 102, 241, 0.2);
+            border-radius: 9999px;
+            color: #c7d2fe;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 12px;
+        }
+
+        /* Glassmorphic Cards */
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1.2fr 1fr;
+            gap: 24px;
+        }
+
+        @media (max-width: 800px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Drop Area */
+        .upload-area {
+            border: 2px dashed var(--border);
+            padding: 40px 20px;
+            text-align: center;
+            border-radius: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.02);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary);
+            background: rgba(99, 102, 241, 0.04);
+            box-shadow: 0 0 20px var(--primary-glow);
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            width: 48px;
+            height: 48px;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .upload-area h3 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .upload-area p {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Form elements */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        label {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        select {
+            background: rgba(17, 24, 39, 0.8);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            cursor: pointer;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px var(--primary-glow);
+        }
+
+        /* Buttons */
         .btn {
-            background: var(--primary);
+            background: var(--primary-gradient);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 6px;
-            font-weight: 600;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 1rem;
+            font-weight: 700;
             cursor: pointer;
-            margin-top: 20px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 14px 0 rgba(99, 102, 241, 0.4);
             width: 100%;
+            margin-top: 24px;
         }
-        .btn:disabled { background: #94a3b8; }
-        #status { margin-top: 20px; color: #64748b; font-size: 14px; }
-        .preview { margin-top: 20px; width: 100%; height: 500px; border: 1px solid #e2e8f0; display: none; }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px 0 rgba(99, 102, 241, 0.6);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-muted);
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        /* Split details */
+        .info-panel {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            height: 100%;
+            justify-content: center;
+        }
+
+        .info-header {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary-light);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+        }
+
+        .info-item:last-child {
+            border: none;
+            padding-bottom: 0;
+        }
+
+        .info-label {
+            color: var(--text-secondary);
+        }
+
+        .info-value {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .info-alert {
+            background: rgba(245, 158, 11, 0.08);
+            border: 1px solid rgba(245, 158, 11, 0.2);
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.85rem;
+            color: #fef3c7;
+            line-height: 1.4;
+            margin-top: 8px;
+        }
+
+        /* Status & Processing */
+        .status-container {
+            margin-top: 16px;
+            display: none;
+        }
+
+        .status-progress-bar {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .status-progress-fill {
+            height: 100%;
+            width: 0%;
+            background: var(--primary-gradient);
+            transition: width 0.3s ease;
+        }
+
+        .status-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+
+        /* Booklet Grid & Results */
+        .results-container {
+            display: none;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .booklet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .booklet-card {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            transition: all 0.2s;
+        }
+
+        .booklet-card:hover {
+            border-color: var(--border-hover);
+            background: rgba(255, 255, 255, 0.04);
+            transform: translateY(-2px);
+        }
+
+        .booklet-num {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            color: var(--primary-light);
+        }
+
+        .booklet-title {
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .booklet-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .booklet-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .btn-sm {
+            padding: 8px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            flex: 1;
+        }
+
+        .btn-sm-primary {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+        }
+
+        .btn-sm-primary:hover {
+            opacity: 0.9;
+        }
+
+        .btn-sm-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text);
+        }
+
+        .btn-sm-secondary:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--text-secondary);
+        }
+
+        /* Assembly Guide */
+        .assembly-guide {
+            background: rgba(99, 102, 241, 0.03);
+            border: 1px solid rgba(99, 102, 241, 0.15);
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .guide-steps {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-top: 16px;
+        }
+
+        @media (max-width: 700px) {
+            .guide-steps {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .step-num {
+            width: 28px;
+            height: 28px;
+            background: var(--primary-gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 0.85rem;
+            color: white;
+            box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+        }
+
+        .step-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .step-desc {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        /* Preview Area */
+        .preview-container {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .preview-tabs {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .tab {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            border-radius: 8px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--text);
+            border-color: var(--text-secondary);
+        }
+
+        .tab.active {
+            background: var(--primary-gradient);
+            color: white;
+            border: none;
+        }
+
+        .preview-frame-wrapper {
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            overflow: hidden;
+            height: 550px;
+            width: 100%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        }
+
+        iframe.preview {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: #ffffff;
+        }
+
+        /* SVG icons */
+        .icon {
+            display: inline-block;
+            width: 1.25em;
+            height: 1.25em;
+            stroke-width: 0;
+            stroke: currentColor;
+            fill: currentColor;
+            vertical-align: middle;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Smart Booklet Render</h1>
-        <p>Adobe-Standard Vector Booklet Engine (V3.2.0 Sync)</p>
-        
-        <div class="upload-area" onclick="document.getElementById('pdfInput').click()">
-            <p id="fileName">Click to upload PDF</p>
-            <input type="file" id="pdfInput" accept="application/pdf">
+        <header>
+            <span class="badge">V3.5.0 Signature Edition</span>
+            <h1>Smart Booklet Generator</h1>
+            <p>Divide large documents into printable folded signatures and assemble a binding-ready book</p>
+        </header>
+
+        <div class="card grid">
+            <!-- Left Side controls -->
+            <div>
+                <div class="upload-area" id="dropArea">
+                    <svg class="upload-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <h3 id="fileName">Drop PDF or Click to Upload</h3>
+                    <p>Standard vector PDF documents</p>
+                    <input type="file" id="pdfInput" accept="application/pdf">
+                </div>
+
+                <div class="form-group">
+                    <label for="sigLimit">Max Booklet Size (Signatures)</label>
+                    <select id="sigLimit">
+                        <option value="8">8 Pages (2 Sheets)</option>
+                        <option value="12">12 Pages (3 Sheets)</option>
+                        <option value="16">16 Pages (4 Sheets)</option>
+                        <option value="20" selected>20 Pages (5 Sheets) - Recommended</option>
+                        <option value="24">24 Pages (6 Sheets)</option>
+                        <option value="28">28 Pages (7 Sheets)</option>
+                        <option value="32">32 Pages (8 Sheets)</option>
+                        <option value="40">40 Pages (10 Sheets)</option>
+                        <option value="60">60 Pages (15 Sheets) - High Capacity</option>
+                        <option value="80">80 Pages (20 Sheets) - Professional Bind</option>
+                        <option value="100">100 Pages (25 Sheets) - Max Technical Limit</option>
+                        <option value="single">Single Booklet (No Splitting)</option>
+                    </select>
+                </div>
+
+                <button id="generateBtn" class="btn" disabled>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <span>Generate Booklet Set</span>
+                </button>
+
+                <div class="status-container" id="statusContainer">
+                    <div class="status-text" id="statusText">Reading document...</div>
+                    <div class="status-progress-bar">
+                        <div class="status-progress-fill" id="statusFill"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side calculation preview -->
+            <div>
+                <div class="info-panel" id="infoPanel">
+                    <div class="info-header">
+                        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span>Imposition Overview</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">File Name</span>
+                        <span class="info-value" id="infoFileName">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Original Pages</span>
+                        <span class="info-value" id="infoPages">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Splitting Mode</span>
+                        <span class="info-value" id="infoSplitMode">-</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Total Booklets</span>
+                        <span class="info-value" id="infoTotalBooklets">-</span>
+                    </div>
+                    <div id="infoAlertBox" class="info-alert" style="display: none;"></div>
+                </div>
+            </div>
         </div>
 
-        <button id="generateBtn" class="btn" disabled>Generate Booklet</button>
-        <div id="status"></div>
+        <!-- Booklet Grid Results -->
+        <div class="results-container" id="resultsContainer">
+            <div class="section-title">
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H3a2 2 0 01-2-2V5a2 2 0 012-2h18a2 2 0 012 2v13a2 2 0 01-2 2z" />
+                </svg>
+                <span>Your Generated Booklets</span>
+            </div>
+            
+            <div class="booklet-grid" id="bookletGrid">
+                <!-- Booklet cards will load here -->
+            </div>
+
+            <!-- Assembly Instruction Guide -->
+            <div class="assembly-guide">
+                <div class="section-title" style="margin-bottom: 4px; font-size: 1.25rem;">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                    <span>Print & Book Assembly Instructions</span>
+                </div>
+                <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+                    Follow these sequential instructions precisely to bind your individual booklets into a single, cohesive book:
+                </p>
+                <div class="guide-steps">
+                    <div class="step">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="step-num">1</div>
+                            <div class="step-title">Double-Sided Printing</div>
+                        </div>
+                        <div class="step-desc" style="margin-top: 6px;">
+                            Download each booklet PDF. Print each file independently. In your printer dialog, select <strong>Double-Sided Printing (Duplex)</strong> and choose <strong>"Flip on Short Edge"</strong> (Landscape flip).
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="step-num">2</div>
+                            <div class="step-title">Fold and Staple</div>
+                        </div>
+                        <div class="step-desc" style="margin-top: 6px;">
+                            Keep sheets organized by booklet. Fold each stack in half at the center. Use a booklet stapler (saddle-stitcher) to put 2 staples down the center fold lines of each booklet independently.
+                        </div>
+                    </div>
+                    <div class="step">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <div class="step-num">3</div>
+                            <div class="step-title">Stack and Bind</div>
+                        </div>
+                        <div class="step-desc" style="margin-top: 6px;">
+                            Stack the folded booklets together in chronological order: <strong>Booklet #1 on top</strong>, followed by Booklet #2, #3, etc. Stitch their spines together or glue them to form your final book spine.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Previewer -->
+        <div class="preview-container" id="previewContainer">
+            <div class="preview-header">
+                <div class="section-title">
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                    <span>Booklet Previewer</span>
+                </div>
+                <div class="preview-tabs" id="previewTabs">
+                    <!-- Tabs loaded dynamically -->
+                </div>
+            </div>
+            <div class="preview-frame-wrapper">
+                <iframe id="preview" class="preview"></iframe>
+            </div>
+        </div>
     </div>
 
-    <iframe id="preview" class="preview"></iframe>
-
     <script>
+        const dropArea = document.getElementById('dropArea');
         const pdfInput = document.getElementById('pdfInput');
         const generateBtn = document.getElementById('generateBtn');
-        const status = document.getElementById('status');
-        const preview = document.getElementById('preview');
-        const fileName = document.getElementById('fileName');
+        const sigLimitSelect = document.getElementById('sigLimit');
+        
+        const statusContainer = document.getElementById('statusContainer');
+        const statusText = document.getElementById('statusText');
+        const statusFill = document.getElementById('statusFill');
+        
+        const infoFileName = document.getElementById('infoFileName');
+        const infoPages = document.getElementById('infoPages');
+        const infoSplitMode = document.getElementById('infoSplitMode');
+        const infoTotalBooklets = document.getElementById('infoTotalBooklets');
+        const infoAlertBox = document.getElementById('infoAlertBox');
+
+        const resultsContainer = document.getElementById('resultsContainer');
+        const bookletGrid = document.getElementById('bookletGrid');
+        const previewContainer = document.getElementById('previewContainer');
+        const previewTabs = document.getElementById('previewTabs');
+        const previewFrame = document.getElementById('preview');
 
         let originalPdfBytes = null;
+        let originalFileName = "";
+        let originalPageCount = 0;
+        let activeBooklets = []; // Store booklet details + blobs/URLs
 
-        pdfInput.addEventListener('change', async (e) => {
+        // Drag and drop event listeners
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropArea.classList.add('dragover');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                dropArea.classList.remove('dragover');
+            }, false);
+        });
+
+        dropArea.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0 && files[0].type === "application/pdf") {
+                handleFile(files[0]);
+            }
+        });
+
+        dropArea.addEventListener('click', () => pdfInput.click());
+
+        pdfInput.addEventListener('change', (e) => {
             const file = e.target.files[0];
             if (file) {
-                fileName.textContent = file.name;
+                handleFile(file);
+            }
+        });
+
+        sigLimitSelect.addEventListener('change', () => {
+            if (originalPdfBytes) {
+                updateSplitCalculations();
+            }
+        });
+
+        async function handleFile(file) {
+            originalFileName = file.name;
+            document.getElementById('fileName').textContent = file.name;
+            infoFileName.textContent = file.name;
+            
+            statusContainer.style.display = 'block';
+            statusText.textContent = 'Reading PDF structure...';
+            statusFill.style.width = '20%';
+
+            try {
                 originalPdfBytes = await file.arrayBuffer();
+                const { PDFDocument } = PDFLib;
+                const tempDoc = await PDFDocument.load(originalPdfBytes);
+                originalPageCount = tempDoc.getPageCount();
+
+                infoPages.textContent = `${originalPageCount} Pages`;
+                generateBtn.disabled = false;
+                
+                statusText.textContent = 'PDF loaded successfully!';
+                statusFill.style.width = '100%';
+                
+                updateSplitCalculations();
+                
+                setTimeout(() => {
+                    statusContainer.style.display = 'none';
+                }, 2000);
+            } catch (err) {
+                console.error(err);
+                statusText.textContent = 'Error reading PDF: ' + err.message;
+                statusFill.style.width = '0%';
+                generateBtn.disabled = true;
+            }
+        }
+
+        function updateSplitCalculations() {
+            const sigLimit = sigLimitSelect.value;
+            const splits = calculateSplits(originalPageCount, sigLimit);
+            
+            if (sigLimit === 'single') {
+                infoSplitMode.textContent = "Single Booklet";
+                infoTotalBooklets.textContent = "1 Booklet";
+            } else {
+                const limitNum = parseInt(sigLimit, 10);
+                infoSplitMode.textContent = `Max ${limitNum} pages/signature`;
+                infoTotalBooklets.textContent = `${splits.length} Booklet${splits.length > 1 ? 's' : ''}`;
+            }
+
+            // Technical Feasibility Warning based on page count
+            const maxSheets = Math.max(...splits.map(s => s.sheets));
+            let alertMsg = "";
+            
+            if (splits.length > 1) {
+                alertMsg += `<strong>Splitting Active:</strong> A document this large (${originalPageCount} pages) is partitioned into <strong>${splits.length} separate signatures</strong>. `;
+            }
+
+            if (maxSheets > 20) {
+                alertMsg += `<br><span style="color: #ef4444;">⚠️ <strong>Technical Warning:</strong> Signatures with ${maxSheets} sheets are very thick. They require thin paper and heavy-duty staplers to bind correctly.</span>`;
+            } else if (maxSheets > 12) {
+                alertMsg += `<br><span style="color: #f59e0b;">⚠️ <strong>Note:</strong> These booklets (${maxSheets} sheets) are moderately thick; ensure your stapler can handle the depth.</span>`;
+            }
+
+            if (alertMsg) {
+                infoAlertBox.style.display = 'block';
+                infoAlertBox.innerHTML = alertMsg;
+            } else {
+                infoAlertBox.style.display = 'none';
+            }
+        }
+
+        function calculateSplits(originalPageCount, maxPagesPerBooklet) {
+            const splits = [];
+            
+            if (maxPagesPerBooklet === 'single') {
+                const signatureSize = Math.ceil(originalPageCount / 4) * 4;
+                const pageIndices = [];
+                for (let i = 0; i < originalPageCount; i++) {
+                    pageIndices.push(i);
+                }
+                while (pageIndices.length < signatureSize) {
+                    pageIndices.push(null);
+                }
+                splits.push({
+                    id: 1,
+                    startPage: 1,
+                    endPage: originalPageCount,
+                    size: signatureSize,
+                    pages: pageIndices,
+                    sheets: signatureSize / 4
+                });
+            } else {
+                const signatureLimit = parseInt(maxPagesPerBooklet, 10);
+                let currentPage = 0;
+                let bookletCount = 1;
+                
+                while (currentPage < originalPageCount) {
+                    const start = currentPage;
+                    const end = Math.min(currentPage + signatureLimit, originalPageCount);
+                    const rawLength = end - start;
+                    
+                    const signatureSize = Math.ceil(rawLength / 4) * 4;
+                    
+                    const pageIndices = [];
+                    for (let i = start; i < end; i++) {
+                        pageIndices.push(i);
+                    }
+                    while (pageIndices.length < signatureSize) {
+                        pageIndices.push(null);
+                    }
+                    
+                    splits.push({
+                        id: bookletCount++,
+                        startPage: start + 1,
+                        endPage: end,
+                        size: signatureSize,
+                        pages: pageIndices,
+                        sheets: signatureSize / 4
+                    });
+                    
+                    currentPage += signatureLimit;
+                }
+            }
+            return splits;
+        }
+
+        generateBtn.addEventListener('click', async () => {
+            if (!originalPdfBytes) return;
+            
+            statusContainer.style.display = 'block';
+            generateBtn.disabled = true;
+            
+            // Clean up any old blob URLs to prevent memory leaks
+            activeBooklets.forEach(b => {
+                if (b.url) URL.revokeObjectURL(b.url);
+            });
+            activeBooklets = [];
+
+            try {
+                const { PDFDocument } = PDFLib;
+                const srcDoc = await PDFDocument.load(originalPdfBytes);
+                const sigLimit = sigLimitSelect.value;
+                const splits = calculateSplits(originalPageCount, sigLimit);
+
+                // Get dimensions of first page, taking rotation into account for visual orientation
+                const firstPage = srcDoc.getPage(0);
+                const firstPageRotation = firstPage.getRotation().angle;
+                const firstPageSize = firstPage.getSize();
+                let width = firstPageSize.width;
+                let height = firstPageSize.height;
+                if (firstPageRotation === 90 || firstPageRotation === 270) {
+                    width = firstPageSize.height;
+                    height = firstPageSize.width;
+                }
+
+                for (let i = 0; i < splits.length; i++) {
+                    const split = splits[i];
+                    statusText.textContent = `Imposing Booklet ${split.id} of ${splits.length}...`;
+                    statusFill.style.width = `${Math.round(((i) / splits.length) * 80) + 10}%`;
+                    
+                    // Small delay to let browser render UI
+                    await new Promise(r => setTimeout(r, 50));
+
+                    const bookletBytes = await createBookletSignature(srcDoc, split.pages, width, height);
+                    const blob = new Blob([bookletBytes], { type: 'application/pdf' });
+                    const url = URL.createObjectURL(blob);
+                    
+                    activeBooklets.push({
+                        id: split.id,
+                        startPage: split.startPage,
+                        endPage: split.endPage,
+                        sheets: split.sheets,
+                        size: split.size,
+                        url: url,
+                        blob: blob,
+                        fileName: `${originalFileName.replace(/\.pdf$/i, '')}_Booklet_${split.id}_of_${splits.length}.pdf`
+                    });
+                }
+
+                statusText.textContent = 'Imposition completed successfully!';
+                statusFill.style.width = '100%';
+                
+                renderResults();
+                
+                setTimeout(() => {
+                    statusContainer.style.display = 'none';
+                    generateBtn.disabled = false;
+                }, 2000);
+
+            } catch (err) {
+                console.error(err);
+                statusText.textContent = 'Processing Error: ' + err.message;
+                statusFill.style.width = '0%';
                 generateBtn.disabled = false;
             }
         });
 
-        generateBtn.addEventListener('click', async () => {
-            try {
-                status.textContent = 'Processing Adobe-standard vector booklet...';
-                const bookletBytes = await createBooklet(originalPdfBytes);
-                
-                const blob = new Blob([bookletBytes], { type: 'application/pdf' });
-                const url = URL.createObjectURL(blob);
-                
-                preview.src = url;
-                preview.style.display = 'block';
-                status.textContent = 'Booklet Generated Successfully!';
-                
-                // Also trigger download
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = 'booklet_output.pdf';
-                link.click();
-            } catch (err) {
-                console.error(err);
-                status.textContent = 'Error: ' + err.message;
-            }
-        });
-
-        async function createBooklet(pdfBytes) {
+        async function createBookletSignature(srcDoc, pageIndices, targetWidth, targetHeight) {
             const { PDFDocument } = PDFLib;
-            const srcDoc = await PDFDocument.load(pdfBytes);
             const bookletDoc = await PDFDocument.create();
             
-            const originalPageCount = srcDoc.getPageCount();
-            const totalPages = Math.ceil(originalPageCount / 4) * 4;
-            const totalSheets = totalPages / 4;
-
-            // Use dimensions from first page to maintain exact quality/ratio
-            const firstPage = srcDoc.getPage(0);
-            const { width, height } = firstPage.getSize();
+            const N = pageIndices.length;
+            const totalSheets = N / 4;
             
-            // Landscape sheet = 2x Width (to hold two pages side-by-side)
-            const sheetWidth = width * 2;
-            const sheetHeight = height;
-
+            const sheetWidth = targetWidth * 2;
+            const sheetHeight = targetHeight;
+            
             for (let s = 0; s < totalSheets; s++) {
-                // Front Side (Outer)
-                const frontLeftIdx = totalPages - (2 * s);
-                const frontRightIdx = (2 * s) + 1;
-                await addSheet(srcDoc, bookletDoc, frontLeftIdx, frontRightIdx, originalPageCount, sheetWidth, sheetHeight, width, height);
-
-                // Back Side (Inner)
-                const backLeftIdx = (2 * s) + 2;
-                const backRightIdx = totalPages - (2 * s) - 1;
-                await addSheet(srcDoc, bookletDoc, backLeftIdx, backRightIdx, originalPageCount, sheetWidth, sheetHeight, width, height);
+                // Front Side (Outer side of folding sheet)
+                const leftPageIdx = pageIndices[N - 1 - 2 * s];
+                const rightPageIdx = pageIndices[2 * s];
+                await addSheet(srcDoc, bookletDoc, leftPageIdx, rightPageIdx, sheetWidth, sheetHeight, targetWidth, targetHeight);
+                
+                // Back Side (Inner side of folding sheet)
+                const backLeftPageIdx = pageIndices[2 * s + 1];
+                const backRightPageIdx = pageIndices[N - 2 - 2 * s];
+                await addSheet(srcDoc, bookletDoc, backLeftPageIdx, backRightPageIdx, sheetWidth, sheetHeight, targetWidth, targetHeight);
             }
-
+            
             return await bookletDoc.save();
         }
 
-        async function addSheet(srcDoc, bookletDoc, leftIdx, rightIdx, maxPages, sW, sH, pW, pH) {
+        async function addSheet(srcDoc, bookletDoc, leftPageIdx, rightPageIdx, sW, sH, pW, pH) {
             const sheet = bookletDoc.addPage([sW, sH]);
             const halfW = sW / 2;
-
-            const drawPage = async (idx, xOffset) => {
-                if (idx <= maxPages) {
-                    const [embeddedPage] = await bookletDoc.embedPdf(srcDoc, [idx - 1]);
-                    
-                    // No scaling needed if sheet is exactly 2x width, but we'll apply it for safety
-                    const scale = Math.min(halfW / pW, sH / pH);
-                    const drawW = pW * scale;
-                    const drawH = pH * scale;
-                    
-                    const ox = xOffset + (halfW - drawW) / 2;
-                    const oy = (sH - drawH) / 2;
-
-                    sheet.drawPage(embeddedPage, {
-                        x: ox,
-                        y: oy,
-                        width: drawW,
-                        height: drawH,
-                    });
-                }
-            };
-
-            await drawPage(leftIdx, 0);
-            await drawPage(rightIdx, halfW);
+            
+            await drawEmbeddedPageUpright(sheet, bookletDoc, srcDoc, leftPageIdx, 0, 0, halfW, sH);
+            await drawEmbeddedPageUpright(sheet, bookletDoc, srcDoc, rightPageIdx, halfW, 0, halfW, sH);
         }
+
+        async function drawEmbeddedPageUpright(sheet, bookletDoc, srcDoc, pageIdx, xBox, yBox, wBox, hBox) {
+            if (pageIdx === null || pageIdx === undefined || pageIdx < 0) return;
+            
+            const { degrees } = PDFLib;
+            
+            // Get the page and its rotation
+            const page = srcDoc.getPage(pageIdx);
+            const rotation = page.getRotation().angle; // 0, 90, 180, 270
+            
+            const { width: wRaw, height: hRaw } = page.getSize();
+            
+            // Determine visual size
+            let wVis = wRaw;
+            let hVis = hRaw;
+            if (rotation === 90 || rotation === 270) {
+                wVis = hRaw;
+                hVis = wRaw;
+            }
+            
+            // Calculate scale and visual drawing dimensions
+            const scale = Math.min(wBox / wVis, hBox / hVis);
+            const wDraw = wVis * scale;
+            const hDraw = hVis * scale;
+            
+            // Bounding box origin (centered inside the target box)
+            const xVis = xBox + (wBox - wDraw) / 2;
+            const yVis = yBox + (hBox - hDraw) / 2;
+            
+            // Embed the source page
+            const [embeddedPage] = await bookletDoc.embedPdf(srcDoc, [pageIdx]);
+            
+            // Set drawing options based on rotation angle
+            const options = {
+                width: wRaw * scale,
+                height: hRaw * scale
+            };
+            
+            if (rotation === 0 || rotation === undefined) {
+                options.x = xVis;
+                options.y = yVis;
+                options.rotate = degrees(0);
+            } else if (rotation === 90) {
+                options.x = xVis;
+                options.y = yVis + wRaw * scale;
+                options.rotate = degrees(-90);
+            } else if (rotation === 180) {
+                options.x = xVis + wRaw * scale;
+                options.y = yVis + hRaw * scale;
+                options.rotate = degrees(180);
+            } else if (rotation === 270) {
+                options.x = xVis + hRaw * scale;
+                options.y = yVis;
+                options.rotate = degrees(-270);
+            }
+            
+            sheet.drawPage(embeddedPage, options);
+        }
+
+        function renderResults() {
+            // Render booklet grid cards
+            bookletGrid.innerHTML = "";
+            activeBooklets.forEach(booklet => {
+                const card = document.createElement('div');
+                card.className = "booklet-card";
+                card.innerHTML = `
+                    <div class="booklet-num">Booklet #${booklet.id}</div>
+                    <div class="booklet-title">Booklet ${booklet.id} of ${activeBooklets.length}</div>
+                    <div class="booklet-meta">
+                        <span><strong>Source Pages:</strong> ${booklet.startPage} - ${booklet.endPage}</span>
+                        <span><strong>Booklet Size:</strong> ${booklet.size} Pages</span>
+                        <span><strong>Paper Sheets:</strong> ${booklet.sheets} ${booklet.sheets === 1 ? 'Sheet' : 'Sheets'}</span>
+                    </div>
+                    <div class="booklet-actions">
+                        <button class="btn-sm btn-sm-primary" onclick="downloadBooklet(${booklet.id})">
+                            <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                            </svg>
+                            Download
+                        </button>
+                        <button class="btn-sm btn-sm-secondary" onclick="previewBooklet(${booklet.id})">
+                            <svg style="width: 14px; height: 14px;" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                            Preview
+                        </button>
+                    </div>
+                `;
+                bookletGrid.appendChild(card);
+            });
+
+            // Render Previewer Tabs
+            previewTabs.innerHTML = "";
+            activeBooklets.forEach(booklet => {
+                const tab = document.createElement('button');
+                tab.className = `tab ${booklet.id === 1 ? 'active' : ''}`;
+                tab.id = `tab-${booklet.id}`;
+                tab.textContent = `Booklet ${booklet.id}`;
+                tab.onclick = () => previewBooklet(booklet.id);
+                previewTabs.appendChild(tab);
+            });
+
+            // Display results & previewers
+            resultsContainer.style.display = 'flex';
+            previewContainer.style.display = 'flex';
+            
+            // Set initial preview to Booklet 1
+            if (activeBooklets.length > 0) {
+                previewBooklet(1);
+            }
+        }
+
+        window.downloadBooklet = function(id) {
+            const booklet = activeBooklets.find(b => b.id === id);
+            if (booklet) {
+                const link = document.createElement('a');
+                link.href = booklet.url;
+                link.download = booklet.fileName;
+                link.click();
+            }
+        };
+
+        window.previewBooklet = function(id) {
+            const booklet = activeBooklets.find(b => b.id === id);
+            if (booklet) {
+                // Update active tab styling
+                document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                const activeTab = document.getElementById(`tab-${id}`);
+                if (activeTab) activeTab.classList.add('active');
+
+                // Load in iframe
+                previewFrame.src = booklet.url;
+            }
+        };
     </script>
 </body>
 </html>
